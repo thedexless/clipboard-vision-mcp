@@ -52,22 +52,30 @@ If your Python isn't on PATH globally, use the absolute path:
 - Windows: `"command": ["C:\\Users\\YOU\\AppData\\Local\\Programs\\Python\\Python312\\python.exe", "-m", "clipboard_vision_mcp"]`
 - Unix: `"command": ["/usr/bin/python3", "-m", "clipboard_vision_mcp"]`
 
-## 4. Configure image-paste keybindings ⚠️ important
+## 4. Configure image-paste keybindings (Alt+V) ⚠️ important
 
-Opencode does **not** bind image-paste to `Ctrl+V` / `Alt+V` by default. Without this step, copying a screenshot and hitting paste will insert nothing (or plain text).
+Two easy-to-miss facts about opencode:
 
-Edit the `keybinds` section of `opencode.json` (or `keybinds.json` if you use a split config):
+- Keybinds live in **`tui.json`** (next to `opencode.json`). Do **not** put a `keybinds` block in `opencode.json`: it rejects unknown top-level keys and will **fail to start**.
+- There is **no** `input_paste_image` action. Pasting (text **and** images) is the single `input_paste` action; opencode's TUI reads the image from the OS clipboard. It's bound to `Ctrl+V` by default — bind it to `Alt+V` too if you want that shortcut.
+
+Create/merge `tui.json`:
 
 ```json
 {
+  "$schema": "https://opencode.ai/tui.json",
   "keybinds": {
-    "input_paste": "ctrl+v",
-    "input_paste_image": "alt+v"
+    "input_paste": [
+      { "key": "ctrl+v", "preventDefault": false },
+      { "key": "alt+v", "preventDefault": false }
+    ]
   }
 }
 ```
 
 Restart Opencode.
+
+> ℹ️ Optional: the `*_from_clipboard` tools read the OS clipboard themselves, so you can skip pasting — just copy a screenshot and ask the model to analyze your clipboard. See `examples/tui.json`.
 
 ## 5. Test it
 

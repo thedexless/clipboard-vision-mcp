@@ -125,22 +125,30 @@ See [docs/OPENCODE.md](docs/OPENCODE.md) for Opencode (Windows-tested) or [docs/
 
 > 💡 **Use the absolute path to the venv's Python.** This guarantees the MCP starts with the right dependencies regardless of shell, cwd, or active venv.
 
-### 5. ⚠️ Opencode keybindings for pasting images
+### 5. ⚠️ Opencode keybindings for pasting images (Alt+V)
 
-Opencode does **not** bind image-paste to `Ctrl+V` / `Alt+V` by default. Without this step, copying a screenshot and hitting paste will insert nothing (or plain text).
+Two important facts about opencode (these are easy to get wrong):
 
-Edit your Opencode `keybinds.json` or the `keybinds` section of `opencode.json`:
+- Keybinds live in **`tui.json`** (next to `opencode.json`), **NOT** in `opencode.json`. `opencode.json` rejects unknown top-level keys, so adding a `keybinds` block there makes opencode **refuse to start** (`ConfigInvalidError`).
+- There is **no** `input_paste_image` action. Pasting (text **and** images) is the single `input_paste` action — opencode's TUI reads the image straight from the OS clipboard. It is bound to `Ctrl+V` by default; to also paste with `Alt+V`, bind `input_paste` to both.
+
+Create/merge `tui.json` (e.g. `~/.config/opencode/tui.json` on Linux/macOS, `C:\Users\<you>\.config\opencode\tui.json` on Windows):
 
 ```json
 {
+  "$schema": "https://opencode.ai/tui.json",
   "keybinds": {
-    "input_paste": "ctrl+v",
-    "input_paste_image": "alt+v"
+    "input_paste": [
+      { "key": "ctrl+v", "preventDefault": false },
+      { "key": "alt+v", "preventDefault": false }
+    ]
   }
 }
 ```
 
-Restart Opencode after editing.
+Restart Opencode after editing. Then copy a screenshot and press `Alt+V` (or `Ctrl+V`) in the prompt — the image attaches.
+
+> ℹ️ Optional: the `*_from_clipboard` tools read the OS clipboard themselves, so you can skip pasting entirely — just copy a screenshot and ask the model to "analyze my clipboard".
 
 ### 6. Does it auto-start after a Windows reboot?
 

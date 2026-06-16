@@ -1,4 +1,5 @@
 {
+  "$schema": "https://opencode.ai/config.json",
   "mcp": {
     "clipboard-vision": {
       "type": "local",
@@ -8,9 +9,5 @@
       },
       "enabled": true
     }
-  },
-  "keybinds": {
-    "input_paste": "ctrl+v",
-    "input_paste_image": "alt+v"
   }
 }

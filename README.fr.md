@@ -125,22 +125,30 @@ Voir [docs/OPENCODE.md](docs/OPENCODE.md) pour Opencode (testé Windows) ou [doc
 
 > 💡 **Utilise le chemin absolu du Python du venv.** Ça garantit que le MCP démarre avec les bonnes dépendances, peu importe le shell, le cwd ou le venv actif.
 
-### 5. ⚠️ Raccourcis Opencode pour coller des images
+### 5. ⚠️ Raccourcis Opencode pour coller des images (Alt+V)
 
-Opencode **ne** lie **pas** le collage d'image à `Ctrl+V` / `Alt+V` par défaut. Sans cette étape, coller une capture insère du texte (ou rien).
+Deux choses importantes sur opencode (faciles à se tromper) :
 
-Édite `keybinds.json` ou la section `keybinds` d'`opencode.json` :
+- Les raccourcis vivent dans **`tui.json`** (à côté d'`opencode.json`), **PAS** dans `opencode.json`. Ce dernier rejette les clés inconnues, donc y mettre un bloc `keybinds` fait **planter le démarrage** d'opencode (`ConfigInvalidError`).
+- Il n'existe **pas** d'action `input_paste_image`. Le collage (texte **et** image) est l'action unique `input_paste` — le TUI d'opencode lit directement l'image dans le presse-papier OS. Elle est liée à `Ctrl+V` par défaut ; pour coller aussi avec `Alt+V`, lie `input_paste` aux deux.
+
+Crée/fusionne `tui.json` (ex. `~/.config/opencode/tui.json` sous Linux/macOS, `C:\Users\<toi>\.config\opencode\tui.json` sous Windows) :
 
 ```json
 {
+  "$schema": "https://opencode.ai/tui.json",
   "keybinds": {
-    "input_paste": "ctrl+v",
-    "input_paste_image": "alt+v"
+    "input_paste": [
+      { "key": "ctrl+v", "preventDefault": false },
+      { "key": "alt+v", "preventDefault": false }
+    ]
   }
 }
 ```
 
-Redémarre Opencode.
+Redémarre Opencode. Copie ensuite une capture et appuie sur `Alt+V` (ou `Ctrl+V`) dans la zone de saisie — l'image s'attache.
+
+> ℹ️ Optionnel : les outils `*_from_clipboard` lisent eux-mêmes le presse-papier OS, tu peux donc zapper le collage — copie une capture et demande au modèle « analyse mon presse-papier ».
 
 ### 6. Est-ce que ça démarre automatiquement après un redémarrage Windows ?
 

@@ -21,7 +21,7 @@ Please:
    - Linux + X11: `sudo apt install xclip` (or distro equivalent).
 5. Ask me for my Groq API key (free at https://console.groq.com/keys). Do NOT hardcode it in any committed file — only write it into my local MCP client config.
 6. Detect which MCP client I'm using (ask if uncertain) and write the correct config:
-   - Opencode: add an `mcp.clipboard-vision` entry to `opencode.json` with `"command": ["python", "-m", "clipboard_vision_mcp"]` and the `GROQ_API_KEY` env var. Also make sure `keybinds.input_paste` and `keybinds.input_paste_image` are bound (e.g. `ctrl+v` and `alt+v`) — Opencode does NOT bind image-paste by default.
+   - Opencode: add an `mcp.clipboard-vision` entry to `opencode.json` with `"command": ["python", "-m", "clipboard_vision_mcp"]` and the `GROQ_API_KEY` env var. KEYBINDS GOTCHAS (critical, do not skip): (a) opencode.json rejects unknown top-level keys — NEVER put a `keybinds` block in opencode.json or opencode will fail to start; keybinds go in a SEPARATE `tui.json` next to opencode.json. (b) There is NO `input_paste_image` action in opencode; paste (text AND images) is the single `input_paste` action, which opencode's TUI reads from the OS clipboard. Bind `input_paste` to BOTH `ctrl+v` and `alt+v` in `tui.json` so Alt+V pastes an image (see examples/tui.json). (c) After writing both files, validate each as JSON before finishing.
    - Claude Code / Cursor / Cline / Continue: follow the shape in docs/CLIENTS.md from the repo.
 7. Verify the server starts: run `python -m clipboard_vision_mcp` for ~2 seconds and confirm it does not crash (it should stay idle on stdin).
 8. Tell me exactly how to test it: copy a screenshot, open my client, ask "use analyze_clipboard and describe what I just copied".
