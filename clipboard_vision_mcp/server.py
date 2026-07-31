@@ -1,4 +1,4 @@
-"""MCP server exposing vision tools backed by Groq + Llama-4 Scout.
+"""MCP server exposing vision tools backed by Groq + Qwen 3.6 27B.
 
 Two families of tools:
   - *_from_path   : analyze an image file on disk.
@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -27,9 +28,33 @@ from .clipboard import ClipboardError, save_clipboard_image
 
 SERVER_NAME = "clipboard-vision-mcp"
 SERVER_VERSION = "0.1.0"
-VISION_MODEL = os.environ.get(
-    "VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct"
+DEFAULT_VISION_MODEL = "qwen/qwen3.6-27b"
+# Read once at startup. GROQ_VISION_MODEL is the documented name; VISION_MODEL
+# is kept as a fallback so configs written before the Llama-4 Scout deprecation
+# (2026-06-17) keep working.
+VISION_MODEL = (
+    os.environ.get("GROQ_VISION_MODEL")
+    or os.environ.get("VISION_MODEL")
+    or DEFAULT_VISION_MODEL
 )
+
+# Reasoning models (Qwen 3.6 among them) spend a large share of the completion
+# on a <think> block before answering. Llama-4 Scout did not, so the old 2048
+# budget now truncates the actual answer mid-sentence.
+MAX_OUTPUT_TOKENS = int(os.environ.get("GROQ_VISION_MAX_TOKENS", "4096"))
+
+_THINK_BLOCK = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
+
+
+def _strip_reasoning(text: str) -> str:
+    """Drop the model's <think> block; callers only want the final answer."""
+    cleaned = _THINK_BLOCK.sub("", text)
+    # A leftover opening tag means the block was never closed: the budget ran
+    # out mid-reasoning and no answer followed. Keep the reasoning anyway —
+    # truncated, but far more useful to the caller than an empty string.
+    cleaned = cleaned.replace("<think>", "").strip()
+    return cleaned or text.replace("<think>", "").replace("</think>", "").strip()
+
 
 # Security: only allow image files, bound the size to prevent a malicious /
 # prompt-injected caller from exfiltrating arbitrary local files as base64.
@@ -97,9 +122,9 @@ class VisionClient:
                 }
             ],
             temperature=0.5,
-            max_tokens=2048,
+            max_tokens=MAX_OUTPUT_TOKENS,
         )
-        return response.choices[0].message.content or ""
+        return _strip_reasoning(response.choices[0].message.content or "")
 
 
 vision_client: VisionClient | None = None

@@ -5,7 +5,7 @@ Copie-colle ce prompt dans n'importe quel assistant de code IA (DeepSeek, GLM, C
 ---
 
 ```
-Tu vas installer et configurer le serveur MCP `clipboard-vision-mcp` sur ma machine pour que je puisse coller des captures d'écran dans mon client MCP (Opencode, Claude Code, Cursor, Cline, Continue, ...) et que les modèles texte-only puissent les "voir" via Groq + Llama-4 Scout.
+Tu vas installer et configurer le serveur MCP `clipboard-vision-mcp` sur ma machine pour que je puisse coller des captures d'écran dans mon client MCP (Opencode, Claude Code, Cursor, Cline, Continue, ...) et que les modèles texte-only puissent les "voir" via Groq + Qwen 3.6 27B.
 
 Dépôt : https://github.com/Capetlevrai/clipboard-vision-mcp
 
@@ -23,6 +23,7 @@ Procède ainsi :
 6. Détecte quel client MCP j'utilise (demande si incertain) et écris la bonne config :
    - Opencode : ajoute une entrée `mcp.clipboard-vision` dans `opencode.json` avec `"command": ["python", "-m", "clipboard_vision_mcp"]` et la variable d'env `GROQ_API_KEY`. PIÈGES KEYBINDS (critique, ne saute pas) : (a) opencode.json rejette les clés inconnues — NE mets JAMAIS de bloc `keybinds` dans opencode.json sinon opencode refusera de démarrer ; les raccourcis vont dans un `tui.json` SÉPARÉ à côté d'opencode.json. (b) Il n'existe PAS d'action `input_paste_image` dans opencode ; le collage (texte ET images) est l'action unique `input_paste`, que le TUI d'opencode lit dans le presse-papier OS. Lie `input_paste` à `ctrl+v` ET `alt+v` dans `tui.json` pour qu'Alt+V colle une image (voir examples/tui.json). (c) Après avoir écrit les deux fichiers, valide chacun en JSON avant de finir.
    - Claude Code / Cursor / Cline / Continue : suis le format de docs/CLIENTS.md dans le dépôt.
+   - Laisse le modèle de vision à sa valeur par défaut (`qwen/qwen3.6-27b`). Ne définis la variable optionnelle `GROQ_VISION_MODEL` à côté de `GROQ_API_KEY` que si je demande un modèle précis, ou si le défaut a été retiré entre-temps par Groq — dans ce cas, consulte https://console.groq.com/docs/models.
 7. Vérifie que le serveur démarre : lance `python -m clipboard_vision_mcp` pendant ~2 secondes, confirme qu'il ne crashe pas (il doit rester inactif sur stdin).
 8. Dis-moi exactement comment tester : copier une capture, ouvrir mon client, demander "utilise analyze_clipboard et décris ce que je viens de copier".
 

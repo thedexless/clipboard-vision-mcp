@@ -52,6 +52,19 @@ If your Python isn't on PATH globally, use the absolute path:
 - Windows: `"command": ["C:\\Users\\YOU\\AppData\\Local\\Programs\\Python\\Python312\\python.exe", "-m", "clipboard_vision_mcp"]`
 - Unix: `"command": ["/usr/bin/python3", "-m", "clipboard_vision_mcp"]`
 
+### Optional: pick the vision model
+
+The server calls Groq with the model id from `GROQ_VISION_MODEL`, read once at startup, defaulting to `qwen/qwen3.6-27b` (27B multimodal, 131K context, 20 MB / 5 images max per request). Add it to the same `environment` block to override:
+
+```json
+"environment": {
+  "GROQ_API_KEY": "gsk_your_key_here",
+  "GROQ_VISION_MODEL": "qwen/qwen3.6-27b"
+}
+```
+
+This is the escape hatch for Groq deprecations — `meta-llama/llama-4-scout-17b-16e-instruct` was retired on 2026-06-17, and swapping the model only takes an env var. Current ids: https://console.groq.com/docs/models. The legacy `VISION_MODEL` name still works when `GROQ_VISION_MODEL` is unset.
+
 ## 4. Configure image-paste keybindings (Alt+V) ⚠️ important
 
 Two easy-to-miss facts about opencode:
@@ -89,3 +102,4 @@ Restart Opencode.
 - **Tools don't appear in Opencode.** Check Opencode's MCP logs. Most common cause: wrong Python path or missing dependency. Run `python -c "import clipboard_vision_mcp"` to confirm the install.
 - **"Clipboard does not contain an image."** Make sure you actually copied an image (screenshot or right-click → Copy image), not a file icon or text.
 - **Works once then fails.** Temp files live in `$TMPDIR/clipboard_vision_mcp/`. Safe to delete between sessions.
+- **`model_not_found` / `model has been decommissioned`.** Groq retired the configured model. Set `GROQ_VISION_MODEL` to a current vision model from https://console.groq.com/docs/models and restart the client.

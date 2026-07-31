@@ -5,7 +5,7 @@ Copy-paste this into any AI coding assistant (DeepSeek, GLM, Claude, GPT, Gemini
 ---
 
 ```
-You are going to install and configure the `clipboard-vision-mcp` MCP server on my machine so that I can paste screenshots in my MCP-capable coding client (Opencode, Claude Code, Cursor, Cline, Continue, ...) and have text-only models see them via Groq + Llama-4 Scout.
+You are going to install and configure the `clipboard-vision-mcp` MCP server on my machine so that I can paste screenshots in my MCP-capable coding client (Opencode, Claude Code, Cursor, Cline, Continue, ...) and have text-only models see them via Groq + Qwen 3.6 27B.
 
 Repository: https://github.com/Capetlevrai/clipboard-vision-mcp
 
@@ -23,6 +23,7 @@ Please:
 6. Detect which MCP client I'm using (ask if uncertain) and write the correct config:
    - Opencode: add an `mcp.clipboard-vision` entry to `opencode.json` with `"command": ["python", "-m", "clipboard_vision_mcp"]` and the `GROQ_API_KEY` env var. KEYBINDS GOTCHAS (critical, do not skip): (a) opencode.json rejects unknown top-level keys — NEVER put a `keybinds` block in opencode.json or opencode will fail to start; keybinds go in a SEPARATE `tui.json` next to opencode.json. (b) There is NO `input_paste_image` action in opencode; paste (text AND images) is the single `input_paste` action, which opencode's TUI reads from the OS clipboard. Bind `input_paste` to BOTH `ctrl+v` and `alt+v` in `tui.json` so Alt+V pastes an image (see examples/tui.json). (c) After writing both files, validate each as JSON before finishing.
    - Claude Code / Cursor / Cline / Continue: follow the shape in docs/CLIENTS.md from the repo.
+   - Leave the vision model at its default (`qwen/qwen3.6-27b`). Only set the optional `GROQ_VISION_MODEL` env var alongside `GROQ_API_KEY` if I ask for a specific model, or if the default has since been retired by Groq — check https://console.groq.com/docs/models in that case.
 7. Verify the server starts: run `python -m clipboard_vision_mcp` for ~2 seconds and confirm it does not crash (it should stay idle on stdin).
 8. Tell me exactly how to test it: copy a screenshot, open my client, ask "use analyze_clipboard and describe what I just copied".
 

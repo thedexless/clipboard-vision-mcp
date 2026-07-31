@@ -16,7 +16,7 @@ Cheap/fast text-only models like **DeepSeek V4** and **GLM 5.1** are great for c
 
 ## The fix
 
-This MCP server exposes `*_from_clipboard` tools. When the LLM needs to see your screenshot, it calls `analyze_clipboard` — the server reads the clipboard image, sends it to a real vision model (**Groq + Llama-4 Scout, free tier**), and returns a text description the text model can reason about.
+This MCP server exposes `*_from_clipboard` tools. When the LLM needs to see your screenshot, it calls `analyze_clipboard` — the server reads the clipboard image, sends it to a real vision model (**Groq + Qwen 3.6 27B, free tier**), and returns a text description the text model can reason about.
 
 Result: **paste → ask → done.** No file shuffling.
 
@@ -37,7 +37,8 @@ Prefer doing it yourself? Keep reading.
 
 - 🖼️ **Clipboard-first** — `analyze_clipboard`, `extract_text_from_clipboard`, `diagnose_error_from_clipboard`, `describe_ui_from_clipboard`, `code_from_clipboard`.
 - 📁 **File path fallback** — same tools available for images already on disk.
-- 🆓 **Free vision backend** — Groq's free tier with Llama-4 Scout (17B, multimodal).
+- 🆓 **Free vision backend** — Groq's free tier with Qwen 3.6 27B (27B multimodal, 131K context).
+- 🔁 **Model is swappable** — set `GROQ_VISION_MODEL` to follow Groq's catalog without touching the code.
 - 🖥️ **Multi-OS** — Windows, macOS, Linux (X11 + Wayland).
 - 🔒 **Security hardened** — extension/size/magic-byte validation, auto-delete of clipboard temp files after analysis.
 - 🔌 **MCP standard** — works with Opencode, Claude Code, Cursor, Cline, Continue, or any MCP-capable client.
@@ -55,7 +56,7 @@ Prefer doing it yourself? Keep reading.
 | Package | Purpose |
 |---|---|
 | `mcp>=1.0.0` | MCP protocol server |
-| `groq>=0.11.0` | Groq API client (Llama-4 Scout vision) |
+| `groq>=0.11.0` | Groq API client (Qwen 3.6 27B vision) |
 | `aiofiles>=23.0.0` | Async file I/O |
 | `Pillow>=10.0.0` | Clipboard image extraction (Windows/macOS), PNG encoding |
 
@@ -125,6 +126,19 @@ See [docs/OPENCODE.md](docs/OPENCODE.md) for Opencode (Windows-tested) or [docs/
 
 > 💡 **Use the absolute path to the venv's Python.** This guarantees the MCP starts with the right dependencies regardless of shell, cwd, or active venv.
 
+### 4b. Changing the vision model (optional)
+
+The model id is read once at startup from `GROQ_VISION_MODEL`, defaulting to `qwen/qwen3.6-27b`. Add it to the same `environment` block to pin a different one:
+
+```json
+"environment": {
+  "GROQ_API_KEY": "gsk_your_key_here",
+  "GROQ_VISION_MODEL": "qwen/qwen3.6-27b"
+}
+```
+
+Useful when Groq retires a model — as happened to `meta-llama/llama-4-scout-17b-16e-instruct` on 2026-06-17. Pick any vision model from https://console.groq.com/docs/models; no code change required. The older `VISION_MODEL` name still works as a fallback.
+
 ### 5. ⚠️ Opencode keybindings for pasting images (Alt+V)
 
 Two important facts about opencode (these are easy to get wrong):
@@ -169,7 +183,7 @@ LLM (DeepSeek, GLM, Claude, ...): [calls diagnose_error_from_clipboard]
         running on port 5432. Start it with: ..."
 ```
 
-The text-only model never sees pixels — it reads the description returned by Llama-4 Scout and reasons over it.
+The text-only model never sees pixels — it reads the description returned by Qwen 3.6 27B and reasons over it.
 
 ### Tool reference
 
@@ -214,7 +228,7 @@ Please open a [private security advisory](https://github.com/Capetlevrai/clipboa
 ```
 ┌──────────────┐   MCP   ┌─────────────────┐   HTTPS   ┌─────────────────┐
 │  Opencode    │ ──────▶ │  clipboard-     │ ────────▶ │  Groq API       │
-│  (DeepSeek)  │         │  vision-mcp     │           │  Llama-4 Scout  │
+│  (DeepSeek)  │         │  vision-mcp     │           │  Qwen 3.6 27B   │
 └──────────────┘         └─────────────────┘           └─────────────────┘
                               │
                               ▼
@@ -231,13 +245,14 @@ Please open a [private security advisory](https://github.com/Capetlevrai/clipboa
 - **"GROQ_API_KEY is not set."** — Check the `environment` block in your client config, then **fully restart** the client.
 - **Tools don't appear in Opencode.** — Check Opencode's MCP logs. Run `python -m clipboard_vision_mcp` manually — it should start and wait silently on stdin.
 - **"Refusing to read '<ext>' — only image files are allowed."** — You (or the LLM) passed a non-image path. This is the security guard doing its job.
+- **`model_not_found` / `model has been decommissioned`.** — Groq retired the configured vision model (this is what killed `meta-llama/llama-4-scout-17b-16e-instruct` on 2026-06-17). Set `GROQ_VISION_MODEL` to a current id from https://console.groq.com/docs/models and restart the client.
 
 ---
 
 ## Credits
 
 - Forked from [itcomgroup/vision-mcp-server](https://github.com/itcomgroup/vision-mcp-server) — original Groq + Llama-4 Scout MCP integration.
-- Vision model: [Llama-4 Scout 17B](https://groq.com/) served by Groq.
+- Vision model: [Qwen 3.6 27B](https://groq.com/) served by Groq (replaces Llama-4 Scout 17B, deprecated 2026-06-17).
 
 ## License
 
