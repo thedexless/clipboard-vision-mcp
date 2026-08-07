@@ -1,0 +1,11 @@
+#!/bin/sh
+# clipboard-vision-mcp MCP gate (durable fix, 2026-08-07)
+# Validates the clipboard-vision MCP server boots correctly before commit.
+
+echo "[gate] clipboard-vision mcp-smoke ..."
+node scripts/mcp-smoke.mjs clipboard-vision || {
+  echo "[gate] FAILED: clipboard-vision MCP server did not boot. See output above."
+  exit 1
+}
+
+exit 0
