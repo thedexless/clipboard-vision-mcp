@@ -20,6 +20,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 const SERVER_NAME = process.argv[2] ?? "argus";
+const FORCE_LOCAL = process.argv.includes("--local") || SERVER_NAME === "argus";
 
 const CONFIG_CANDIDATES = [
   process.env.OPENCODE_CONFIG,
@@ -58,6 +59,19 @@ function stripComments(src) {
 }
 
 function findEntry() {
+  // For argus, always test local STDIO version (the repo's built server)
+  if (FORCE_LOCAL && SERVER_NAME === "argus") {
+    const projectRoot = process.cwd();
+    return {
+      entry: {
+        type: "local",
+        command: ["node", "node_modules/tsx/dist/cli.mjs", "mcp/server.ts"],
+        environment: {}
+      },
+      file: "local (forced)"
+    };
+  }
+
   let lastErr = null;
   for (const file of CONFIG_CANDIDATES) {
     try {
