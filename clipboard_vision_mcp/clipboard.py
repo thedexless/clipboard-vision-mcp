@@ -49,7 +49,7 @@ def save_clipboard_image() -> str:
 
 def _grab_with_pil(out: Path) -> None:
     try:
-        from PIL import ImageGrab, Image  # type: ignore
+        from PIL import Image, ImageGrab  # type: ignore
     except ImportError as e:
         raise ClipboardError(
             "Pillow is required for clipboard image support. Run: pip install Pillow"

@@ -249,7 +249,8 @@ async def list_tools() -> list[Tool]:
 
 
 async def _run(prompt_key: str, image_path: str, override: str | None = None) -> str:
-    assert vision_client is not None
+    if vision_client is None:
+        raise RuntimeError("vision_client not initialized (GROQ_API_KEY unset)")
     prompt = override or PROMPTS[prompt_key]
     return await vision_client.analyze(image_path, prompt)
 
@@ -270,6 +271,24 @@ async def _run_clipboard(prompt_key: str, override: str | None = None) -> str:
             pass
 
 
+# Tool dispatch: tool name -> (prompt_key, source, accepts_override)
+# source="clipboard" reads the clipboard; source="path" reads arguments["image_path"].
+_TOOL_DISPATCH: dict[str, tuple[str, str, bool]] = {
+    "analyze_clipboard": ("analyze", "clipboard", True),
+    "extract_text_from_clipboard": ("extract_text", "clipboard", False),
+    "describe_ui_from_clipboard": ("describe_ui", "clipboard", False),
+    "diagnose_error_from_clipboard": ("diagnose_error", "clipboard", False),
+    "code_from_clipboard": ("code_from_screenshot", "clipboard", False),
+    "analyze_image": ("analyze", "path", True),
+    "extract_text": ("extract_text", "path", False),
+    "describe_ui": ("describe_ui", "path", False),
+    "diagnose_error": ("diagnose_error", "path", False),
+    "understand_diagram": ("understand_diagram", "path", False),
+    "analyze_chart": ("analyze_chart", "path", False),
+    "code_from_screenshot": ("code_from_screenshot", "path", False),
+}
+
+
 @server.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     if vision_client is None:
@@ -282,38 +301,15 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         ]
 
     try:
-        # Clipboard tools
-        if name == "analyze_clipboard":
-            text = await _run_clipboard("analyze", arguments.get("prompt"))
-        elif name == "extract_text_from_clipboard":
-            text = await _run_clipboard("extract_text")
-        elif name == "describe_ui_from_clipboard":
-            text = await _run_clipboard("describe_ui")
-        elif name == "diagnose_error_from_clipboard":
-            text = await _run_clipboard("diagnose_error")
-        elif name == "code_from_clipboard":
-            text = await _run_clipboard("code_from_screenshot")
-
-        # File-path tools
-        elif name == "analyze_image":
-            text = await _run(
-                "analyze", arguments["image_path"], arguments.get("prompt")
-            )
-        elif name == "extract_text":
-            text = await _run("extract_text", arguments["image_path"])
-        elif name == "describe_ui":
-            text = await _run("describe_ui", arguments["image_path"])
-        elif name == "diagnose_error":
-            text = await _run("diagnose_error", arguments["image_path"])
-        elif name == "understand_diagram":
-            text = await _run("understand_diagram", arguments["image_path"])
-        elif name == "analyze_chart":
-            text = await _run("analyze_chart", arguments["image_path"])
-        elif name == "code_from_screenshot":
-            text = await _run("code_from_screenshot", arguments["image_path"])
+        spec = _TOOL_DISPATCH.get(name)
+        if spec is None:
+            return [TextContent(type="text", text=f"Unknown tool: {name}")]
+        prompt_key, source, accepts_override = spec
+        override = arguments.get("prompt") if accepts_override else None
+        if source == "clipboard":
+            text = await _run_clipboard(prompt_key, override)
         else:
-            text = f"Unknown tool: {name}"
-
+            text = await _run(prompt_key, arguments["image_path"], override)
         return [TextContent(type="text", text=text)]
     except Exception as e:
         return [TextContent(type="text", text=f"Error: {e}")]
