@@ -112,9 +112,15 @@ def test_all_dispatch_prompt_keys_exist_in_prompts():
 
 def test_every_listed_tool_has_dispatch_entry():
     # Cross-check: tool names exposed via list_tools must all be in _TOOL_DISPATCH.
-    # We can't easily call list_tools without an MCP session, so we verify the
-    # reverse: every dispatch key is one we'd plausibly expose. This catches
-    # the real bug: adding a tool to list_tools but forgetting the dispatch
-    # (or vice versa).
+    # Every exposed tool must have a dispatch entry; this catches the real bug
+    # of adding a tool to list_tools but forgetting the dispatch mapping.
     # (Full end-to-end coverage lives in scripts/mcp-smoke.mjs.)
-    assert len(_TOOL_DISPATCH) >= 12
+    import asyncio
+
+    from clipboard_vision_mcp.server import list_tools
+
+    tools = asyncio.run(list_tools())
+    exposed = {t.name for t in tools}
+    dispatch = set(_TOOL_DISPATCH)
+    missing = exposed - dispatch
+    assert not missing, f"tools without dispatch entry: {sorted(missing)}"

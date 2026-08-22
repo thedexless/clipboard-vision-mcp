@@ -51,4 +51,4 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B"]
-ignore = ["E501"]  # line length handled by formatter
+ignore = []  # line length enforced by E501 (line-length = 100 above)
