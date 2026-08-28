@@ -187,6 +187,33 @@ def _clipboard_tool(name: str, description: str) -> Tool:
     )
 
 
+# Tool name → prompt key for the clipboard family. analyze_clipboard is the
+# only clipboard tool that accepts a `prompt` override in its input schema.
+CLIPBOARD_TOOL_PROMPT_KEY: dict[str, str] = {
+    "analyze_clipboard": "analyze",
+    "extract_text_from_clipboard": "extract_text",
+    "describe_ui_from_clipboard": "describe_ui",
+    "diagnose_error_from_clipboard": "diagnose_error",
+    "code_from_clipboard": "code_from_screenshot",
+}
+
+# Tool name → prompt key for the file-path family. analyze_image is the only
+# file tool that accepts a `prompt` override in its input schema.
+FILE_TOOL_PROMPT_KEY: dict[str, str] = {
+    "analyze_image": "analyze",
+    "extract_text": "extract_text",
+    "describe_ui": "describe_ui",
+    "diagnose_error": "diagnose_error",
+    "understand_diagram": "understand_diagram",
+    "analyze_chart": "analyze_chart",
+    "code_from_screenshot": "code_from_screenshot",
+}
+
+# Tools that accept an optional `prompt` argument (defined inline in list_tools
+# with a prompt property rather than via the _image_tool/_clipboard_tool helpers).
+TOOLS_WITH_PROMPT_OVERRIDE = frozenset({"analyze_clipboard", "analyze_image"})
+
+
 @server.list_tools()
 async def list_tools() -> list[Tool]:
     return [
@@ -282,35 +309,12 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         ]
 
     try:
-        # Clipboard tools
-        if name == "analyze_clipboard":
-            text = await _run_clipboard("analyze", arguments.get("prompt"))
-        elif name == "extract_text_from_clipboard":
-            text = await _run_clipboard("extract_text")
-        elif name == "describe_ui_from_clipboard":
-            text = await _run_clipboard("describe_ui")
-        elif name == "diagnose_error_from_clipboard":
-            text = await _run_clipboard("diagnose_error")
-        elif name == "code_from_clipboard":
-            text = await _run_clipboard("code_from_screenshot")
-
-        # File-path tools
-        elif name == "analyze_image":
-            text = await _run(
-                "analyze", arguments["image_path"], arguments.get("prompt")
-            )
-        elif name == "extract_text":
-            text = await _run("extract_text", arguments["image_path"])
-        elif name == "describe_ui":
-            text = await _run("describe_ui", arguments["image_path"])
-        elif name == "diagnose_error":
-            text = await _run("diagnose_error", arguments["image_path"])
-        elif name == "understand_diagram":
-            text = await _run("understand_diagram", arguments["image_path"])
-        elif name == "analyze_chart":
-            text = await _run("analyze_chart", arguments["image_path"])
-        elif name == "code_from_screenshot":
-            text = await _run("code_from_screenshot", arguments["image_path"])
+        if name in CLIPBOARD_TOOL_PROMPT_KEY:
+            override = arguments.get("prompt") if name in TOOLS_WITH_PROMPT_OVERRIDE else None
+            text = await _run_clipboard(CLIPBOARD_TOOL_PROMPT_KEY[name], override)
+        elif name in FILE_TOOL_PROMPT_KEY:
+            override = arguments.get("prompt") if name in TOOLS_WITH_PROMPT_OVERRIDE else None
+            text = await _run(FILE_TOOL_PROMPT_KEY[name], arguments["image_path"], override)
         else:
             text = f"Unknown tool: {name}"
 
