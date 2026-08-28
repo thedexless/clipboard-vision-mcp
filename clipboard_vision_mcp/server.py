@@ -187,33 +187,6 @@ def _clipboard_tool(name: str, description: str) -> Tool:
     )
 
 
-# Tool name → prompt key for the clipboard family. analyze_clipboard is the
-# only clipboard tool that accepts a `prompt` override in its input schema.
-CLIPBOARD_TOOL_PROMPT_KEY: dict[str, str] = {
-    "analyze_clipboard": "analyze",
-    "extract_text_from_clipboard": "extract_text",
-    "describe_ui_from_clipboard": "describe_ui",
-    "diagnose_error_from_clipboard": "diagnose_error",
-    "code_from_clipboard": "code_from_screenshot",
-}
-
-# Tool name → prompt key for the file-path family. analyze_image is the only
-# file tool that accepts a `prompt` override in its input schema.
-FILE_TOOL_PROMPT_KEY: dict[str, str] = {
-    "analyze_image": "analyze",
-    "extract_text": "extract_text",
-    "describe_ui": "describe_ui",
-    "diagnose_error": "diagnose_error",
-    "understand_diagram": "understand_diagram",
-    "analyze_chart": "analyze_chart",
-    "code_from_screenshot": "code_from_screenshot",
-}
-
-# Tools that accept an optional `prompt` argument (defined inline in list_tools
-# with a prompt property rather than via the _image_tool/_clipboard_tool helpers).
-TOOLS_WITH_PROMPT_OVERRIDE = frozenset({"analyze_clipboard", "analyze_image"})
-
-
 @server.list_tools()
 async def list_tools() -> list[Tool]:
     return [
@@ -276,7 +249,8 @@ async def list_tools() -> list[Tool]:
 
 
 async def _run(prompt_key: str, image_path: str, override: str | None = None) -> str:
-    assert vision_client is not None
+    if vision_client is None:
+        raise RuntimeError("vision_client not initialized (GROQ_API_KEY unset)")
     prompt = override or PROMPTS[prompt_key]
     return await vision_client.analyze(image_path, prompt)
 
@@ -297,6 +271,24 @@ async def _run_clipboard(prompt_key: str, override: str | None = None) -> str:
             pass
 
 
+# Tool dispatch: tool name -> (prompt_key, source, accepts_override)
+# source="clipboard" reads the clipboard; source="path" reads arguments["image_path"].
+_TOOL_DISPATCH: dict[str, tuple[str, str, bool]] = {
+    "analyze_clipboard": ("analyze", "clipboard", True),
+    "extract_text_from_clipboard": ("extract_text", "clipboard", False),
+    "describe_ui_from_clipboard": ("describe_ui", "clipboard", False),
+    "diagnose_error_from_clipboard": ("diagnose_error", "clipboard", False),
+    "code_from_clipboard": ("code_from_screenshot", "clipboard", False),
+    "analyze_image": ("analyze", "path", True),
+    "extract_text": ("extract_text", "path", False),
+    "describe_ui": ("describe_ui", "path", False),
+    "diagnose_error": ("diagnose_error", "path", False),
+    "understand_diagram": ("understand_diagram", "path", False),
+    "analyze_chart": ("analyze_chart", "path", False),
+    "code_from_screenshot": ("code_from_screenshot", "path", False),
+}
+
+
 @server.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     if vision_client is None:
@@ -309,15 +301,15 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         ]
 
     try:
-        if name in CLIPBOARD_TOOL_PROMPT_KEY:
-            override = arguments.get("prompt") if name in TOOLS_WITH_PROMPT_OVERRIDE else None
-            text = await _run_clipboard(CLIPBOARD_TOOL_PROMPT_KEY[name], override)
-        elif name in FILE_TOOL_PROMPT_KEY:
-            override = arguments.get("prompt") if name in TOOLS_WITH_PROMPT_OVERRIDE else None
-            text = await _run(FILE_TOOL_PROMPT_KEY[name], arguments["image_path"], override)
+        spec = _TOOL_DISPATCH.get(name)
+        if spec is None:
+            return [TextContent(type="text", text=f"Unknown tool: {name}")]
+        prompt_key, source, accepts_override = spec
+        override = arguments.get("prompt") if accepts_override else None
+        if source == "clipboard":
+            text = await _run_clipboard(prompt_key, override)
         else:
-            text = f"Unknown tool: {name}"
-
+            text = await _run(prompt_key, arguments["image_path"], override)
         return [TextContent(type="text", text=text)]
     except Exception as e:
         return [TextContent(type="text", text=f"Error: {e}")]
